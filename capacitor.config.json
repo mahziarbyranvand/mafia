@@ -1,0 +1,9 @@
+{
+  "appId": "com.mafia.arena",
+  "appName": "Mafia Arena",
+  "webDir": "www",
+  "backgroundColor": "#050403",
+  "android": {
+    "allowMixedContent": true
+  }
+}

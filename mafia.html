@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MAFIA | Roman Arena</title>
+<link href="fonts/fonts.css" rel="stylesheet">
+<script src="lib/peerjs.min.js" onerror="console.log('PeerJS load failed')"></script>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#050403;--panel:#141110;--line:#3a2f2b;
+  --text:#f0e6d2;--mute:#a89680;
+  --blood:#8b1e1e;--gold:#e8c46a;--gold-glow:0 0 15px rgba(232,196,106,0.6);
+  --glass:rgba(20,17,16,.88);--green:#2a9d4a;
+  --shadow:0 20px 60px rgba(0,0,0,0.8);
+  box-sizing:border-box;
+}
+*{box-sizing:inherit;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden;user-select:none}
+body{color:var(--text);font-family:Vazirmatn,Tahoma,sans-serif;display:flex;justify-content:center;position:relative}
+.gt{font-family:'Cinzel Decorative',Vazirmatn,Georgia,serif}
+button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:10px 16px;background:var(--blood);color:#fff;font-weight:700;transition:all .2s}
+button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 20px #0008}
+button:disabled{opacity:.4;cursor:not-allowed}
+.gb{background:linear-gradient(180deg,var(--gold),#a8791f);color:#1a1008;border:1px solid var(--gold);box-shadow:0 4px 14px rgba(210,168,90,0.3)}
+.ghost{background:rgba(0,0,0,0.6);border:1px solid var(--line);color:var(--gold);backdrop-filter:blur(8px)}
+.gt{background:linear-gradient(135deg,var(--gold) 0%,#f7e3a1 50%,#a8791f 100%);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
+input,textarea{font:inherit;background:rgba(0,0,0,0.5);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 14px;min-width:0}
+
+#app{width:100%;max-width:800px;height:100%;display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+/* ====== Splash & Lobby ====== */
+#splash{position:fixed;inset:0;z-index:999;background:#050403 url('bg_lobby.jpg') center/cover;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:opacity .8s}
+#splash::before{content:'';position:absolute;inset:0;background:rgba(5,4,3,.65);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#splash.out{opacity:0;pointer-events:none}
+#splash video{position:relative;width:min(100vw,100vh);height:min(100vw,100vh);object-fit:cover;-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 71%);mask-image:radial-gradient(circle,#000 62%,transparent 71%)}
+#splash .sp-ui{position:absolute;left:0;right:0;bottom:6%;display:flex;flex-direction:column;align-items:center;z-index:2}
+#splash h1{margin:0 0 10px;font-size:2.5rem;text-shadow:0 2px 14px #000}
+#splash #spSound{position:absolute;top:16px;right:16px;z-index:3;padding:8px 12px;font-size:1.1rem}
+.load-bar{width:200px;height:6px;background:rgba(255,255,255,.18);border-radius:99px;overflow:hidden;margin-top:6px}
+.load-bar i{display:block;height:100%;width:0;background:var(--gold);animation:fill 6.6s linear forwards}
+@keyframes fill{to{width:100%}}
+
+.home{display:flex;flex-direction:column;height:100%;padding:20px;gap:16px;background:url('bg_lobby.jpg') center/cover;position:relative}
+.home::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.5);z-index:0}
+.home>*{position:relative;z-index:1}
+.pbar{display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--glass);border:1px solid var(--gold);border-radius:12px;backdrop-filter:blur(10px)}
+.me{display:flex;gap:12px;align-items:center;cursor:pointer}
+.arch{width:50px;height:50px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;position:relative}
+.arch img{width:100%;height:100%;object-fit:cover}
+.frame-overlay{position:absolute;inset:-5px;background-size:contain;background-position:center;pointer-events:none;z-index:2}
+.menu{display:flex;flex-direction:column;gap:12px;margin-top:auto;margin-bottom:20px;max-width:300px;margin-left:auto;margin-right:auto;width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ====== Room Stage ====== */
+body.in-room #app{max-width:none;background:#000}
+.stage{--u:calc(min(100vw,150vh)/100);position:relative;margin:auto;width:calc(var(--u)*100);height:calc(var(--u)*66.667);overflow:hidden;font-size:calc(var(--u)*1.05);
+  background:url('room_normal.png') center/100% 100%,url('room_normal.jpg') center/100% 100%,#000}
+.stage.vip{background:url('room_vip.png') center/100% 100%,url('room_vip.jpg') center/100% 100%,url('room_normal.png') center/100% 100%,url('room_normal.jpg') center/100% 100%,#000;box-shadow:inset 0 0 0 calc(var(--u)*.3) var(--gold)}
+.panel{position:absolute;background:rgba(10,8,7,.84);border:1px solid rgba(232,196,106,.45);border-radius:calc(var(--u)*.8);backdrop-filter:blur(3px)}
+.plhead{left:1.5%;top:2.5%;width:16.5%;padding:calc(var(--u)*.8) calc(var(--u)*1.2);display:flex;justify-content:space-between;color:var(--gold);font-weight:700}
+.plist{left:1.5%;top:9%;width:14%;padding:calc(var(--u)*.5)}
+.pl{display:flex;align-items:center;gap:calc(var(--u)*.8);padding:calc(var(--u)*.45) calc(var(--u)*.7);border-bottom:1px solid #2a2320;cursor:pointer;position:relative}
+.pl img,.pl b{width:calc(var(--u)*2.3);height:calc(var(--u)*2.3);border-radius:50%;object-fit:cover;background:#1b1715;border:1px solid #555;flex:none}
+.pl.tk{background:linear-gradient(90deg,rgba(232,196,106,.25),transparent);border-radius:99px}
+.pl.sel{outline:1px solid var(--gold);border-radius:99px}
+.pl.dead{opacity:.35;text-decoration:line-through}
+.pl i{margin-right:auto;font-style:normal}
+.phase{right:1.5%;top:11%;width:10%;padding:calc(var(--u)*1) calc(var(--u)*.8);text-align:center}
+.phase .big{font-size:calc(var(--u)*1.5);color:var(--gold);font-weight:900}
+.phase .tm{font-size:calc(var(--u)*1.1);color:var(--mute);margin-bottom:calc(var(--u)*.8)}
+.ph{display:flex;gap:calc(var(--u)*.8);align-items:center;padding:calc(var(--u)*.7);color:var(--mute);border-radius:calc(var(--u)*.5)}
+.ph.on{color:var(--gold);background:rgba(232,196,106,.15)}
+.topbtns{position:absolute;right:1.5%;top:2.5%;display:flex;gap:calc(var(--u)*.6)}
+.topbtns button{width:calc(var(--u)*3.6);height:calc(var(--u)*3.6);padding:0;border-radius:calc(var(--u)*.8);font-size:calc(var(--u)*1.5)}
+.seat{position:absolute;width:calc(var(--u)*8);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer;z-index:2}
+.seat:hover,.seat.sel{z-index:10}
+.avatar-wrap{position:relative;width:calc(var(--u)*4.8);height:calc(var(--u)*4.8);border-radius:50%;border:2px solid #6b5a3a;background:#17130f;box-shadow:0 4px 12px #000}
+.avatar-wrap img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.avatar-wrap.talking{border-color:#4be36f;box-shadow:0 0 18px #4be36f}
+.seat.sel .avatar-wrap{border-color:var(--gold);box-shadow:var(--gold-glow)}
+.avatar-wrap.dead{filter:grayscale(1);opacity:.45}
+.mic-icon{position:absolute;bottom:-3px;right:-3px;width:calc(var(--u)*1.7);height:calc(var(--u)*1.7);border-radius:50%;background:#8b1e1e;display:grid;place-items:center;font-size:calc(var(--u)*.9)}
+.mic-icon.on{background:#2a9d4a}
+.seat-name{font-size:calc(var(--u)*.95);margin-top:2px;color:#eee;background:rgba(0,0,0,.72);padding:1px calc(var(--u)*.7);border-radius:4px;white-space:nowrap}
+.interaction-bar{display:none;gap:2px;margin-top:2px;background:rgba(0,0,0,.85);padding:1px 4px;border-radius:99px;border:1px solid #333}
+.seat:hover .interaction-bar,.seat.sel .interaction-bar{display:flex}
+.interaction-bar button{background:none;padding:1px 3px;font-size:calc(var(--u)*.95);color:#bbb;box-shadow:none;transform:none}
+.chat{left:1.5%;bottom:3%;width:23%;height:22%;display:flex;flex-direction:column;padding:calc(var(--u)*.6);gap:calc(var(--u)*.5)}
+.chat-box{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.chat form{display:flex;gap:4px}
+.chat input{flex:1;padding:calc(var(--u)*.5) calc(var(--u)*1);border-radius:99px;font-size:calc(var(--u)*1)}
+.chat button{padding:0 calc(var(--u)*1.2);border-radius:99px}
+.msg{font-size:calc(var(--u)*1);color:#ccc}
+.msg b{color:var(--gold)}
+.msg.sys{color:#4be36f;font-style:italic}
+.roles{position:absolute;left:50%;bottom:1.2%;transform:translateX(-50%);display:flex;gap:calc(var(--u)*1.2)}
+.rb{width:calc(var(--u)*5.6);padding:calc(var(--u)*.7) 0;text-align:center;background:rgba(10,8,7,.85);border:1px solid #3a2f2b;border-radius:4px 4px 14px 14px;opacity:.45;font-size:calc(var(--u)*.95)}
+.rb span{display:block;font-size:calc(var(--u)*2)}
+.rb.on{opacity:1;border-color:var(--gold);background:linear-gradient(#5a1414,#1a0a0a);box-shadow:var(--gold-glow)}
+.acts{position:absolute;right:1.5%;bottom:3%;display:flex;flex-direction:column;gap:calc(var(--u)*.6);width:11%}
+.acts button{padding:calc(var(--u)*.7);font-size:calc(var(--u)*1)}
+.stage.night::before{content:'';position:absolute;inset:0;background:rgba(0,0,25,.58);z-index:1;pointer-events:none}
+.panel,.topbtns,.roles,.acts{z-index:3}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:30}
+.fl{position:absolute;font-size:calc(var(--u)*3.2);animation:fl 2s ease-out forwards}
+@keyframes fl{from{opacity:1;transform:translate(-50%,-50%) scale(.6)}to{opacity:0;transform:translate(-50%,-250%) scale(1.3)}}
+.avatar-wrap.voice{box-shadow:0 0 22px #4be36f,0 0 6px #fff}
+.end{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.82);display:grid;place-items:center;text-align:center}
+.end h2{font-size:calc(var(--u)*4);margin:0 0 calc(var(--u)*1)}
+
+/* هم‌تراز با پنل‌های نقاشی‌شده روی عکس */
+.plhead{left:1.4%;top:2.9%;width:15.2%;height:4.4%;padding:0 calc(var(--u)*1.2);align-items:center;background:#0d0a09}
+.plist{left:1.4%;top:8.1%;width:12.8%;height:50.6%;padding:0;display:flex;flex-direction:column;direction:ltr;background:#0d0a09}
+.pl{flex:1;padding:0 calc(var(--u)*.8)}
+.pl i{margin-left:auto;margin-right:0}
+.phase{left:87%;right:auto;top:10.9%;width:11.3%;height:35.7%;padding:calc(var(--u)*.8);background:#0d0a09;display:flex;flex-direction:column;justify-content:center}
+.topbtns{right:auto;left:84%;top:2.9%;width:14.3%;height:4%}
+.topbtns button{flex:1;width:auto;height:100%;background:#0d0a09}
+.chat{left:1.4%;top:77.6%;bottom:auto;width:21.5%;height:16.6%;background:#0d0a09}
+.roles{left:37.1%;bottom:auto;top:84.8%;transform:none;width:21%;height:9.8%;gap:calc(var(--u)*.6)}
+.rb:not(.on){opacity:1;filter:brightness(.5)}
+.rb{flex:1;width:auto;padding:0;display:flex;flex-direction:column;justify-content:center;background:#0d0a09}
+/* Settings Styles */
+.settings-card{background:var(--glass); border:1px solid rgba(232,196,106,0.3); border-radius:12px; padding:16px; box-shadow:0 4px 15px rgba(0,0,0,0.5); backdrop-filter:blur(10px); width:100%; margin-bottom:16px;}
+.settings-title{color:var(--gold); margin:0 0 12px 0; font-size:1rem; display:flex; align-items:center; gap:8px;}
+.switch{position:relative; display:inline-block; width:50px; height:26px;}
+.switch input{opacity:0; width:0; height:0;}
+.slider{position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#333; transition:.4s; border-radius:26px; border:1px solid #555;}
+.slider:before{position:absolute; content:""; height:20px; width:20px; left:3px; bottom:2px; background-color:white; transition:.4s; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.4);}
+input:checked + .slider{background-color:#2a9d4a; border-color:#4be36f;}
+input:checked + .slider:before{transform:translateX(24px);}
+
+/* ====== قوانین / پنل مدیریت / توست / مودال (از نسخه‌ی دیپ‌سیک) ====== */
+/* Rules */
+.rules-container{display:flex;flex-direction:column;gap:8px;max-width:600px;margin:0 auto;width:100%;padding-bottom:30px}
+details{background:rgba(20,17,16,0.85);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+details[open]{border-color:var(--gold)}
+summary{padding:12px;cursor:pointer;font-weight:bold;color:var(--gold);list-style:none;display:flex;justify-content:space-between}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'▼';font-size:.8rem;transition:transform .3s}
+details[open] summary::after{transform:rotate(180deg)}
+.rule-content{padding:12px;border-top:1px solid var(--line);color:#ddd;font-size:.85rem;line-height:1.7;text-align:justify}
+.rule-content p{margin:0 0 8px 0}
+.rule-content strong{color:var(--gold)}
+
+/* Admin Panel */
+.admin-panel{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0a0505,#1a0a0a);overflow-y:auto;padding:16px}
+.admin-header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(212,175,55,0.15);border:1px solid var(--gold);border-radius:10px;margin-bottom:16px}
+.admin-grid{display:grid;grid-template-columns:1fr;gap:12px;max-width:800px;margin:0 auto}
+.admin-card{background:var(--glass);border:1px solid rgba(232,196,106,0.3);border-radius:12px;padding:14px}
+.admin-card h3{color:var(--gold);margin:0 0 10px;font-size:1rem}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #333;font-size:.85rem;word-break:break-all}
+.info-row b{color:var(--gold)}
+.inf-badge{color:var(--green);font-weight:900;font-size:1.4rem}
+.report-item{background:rgba(139,30,30,0.25);border-left:3px solid var(--blood);padding:8px;margin-bottom:8px;border-radius:4px;font-size:.85rem}
+.report-item .time{color:var(--mute);font-size:.75rem;margin-bottom:4px}
+.gift-sent{background:rgba(42,157,74,0.2);padding:6px;border-radius:6px;margin-bottom:4px;font-size:.85rem}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.admin-actions button{flex:1;min-width:100px;padding:8px;font-size:.85rem}
+
+/* Toast */
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--gold),#a8791f);color:#000;padding:10px 20px;border-radius:20px;font-size:.9rem;font-weight:bold;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.5);transition:opacity .3s;opacity:0;pointer-events:none}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal-content{background:var(--panel);border:1px solid var(--gold);border-radius:12px;padding:20px;max-width:400px;width:100%}
+.modal-content h3{color:var(--gold);margin:0 0 10px}
+.modal-content textarea{width:100%;height:80px;margin-bottom:10px;resize:none}
+
+.admin-quick{display:none;margin-top:6px}
+.admin-quick.on{display:block}
+.ban-screen{position:fixed;inset:0;background:#000;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;padding:20px}
+.ban-screen h1{color:var(--blood);font-size:2rem}
+/* ====== افزوده‌های نسخه‌ی دیپ‌سیک (کد دعوت/هدیه، کیک، استیکر، چت مافیا، ...) ====== */
+.credit{margin-top:14px;font-size:.9rem;color:rgba(240,230,210,.7);text-align:center}
+.credit span{color:var(--gold);font-weight:700}
+.gift-bar{display:flex;gap:6px;align-items:center;justify-content:center;padding:6px;background:var(--glass);border:1px solid var(--line);border-radius:10px;font-size:.85rem;flex-wrap:wrap}
+.gift-bar input{flex:1;padding:6px 10px;font-size:.85rem;text-align:center;font-family:monospace;letter-spacing:1px;min-width:120px}
+.gift-bar button{padding:6px 12px;font-size:.8rem}
+.host-kick{background:#b33;color:#fff;border-radius:4px;padding:2px 6px;font-size:.7rem;margin-left:auto;display:none;cursor:pointer}
+.is-host .host-kick{display:inline-block}
+.msg.mafia{color:#ff6b6b;font-style:italic;background:rgba(139,30,30,.2);padding:2px 5px;border-radius:4px}
+.sticker-bar{display:flex;gap:3px;margin-bottom:2px}
+.sticker-bar span{cursor:pointer;font-size:calc(var(--u)*1.2);padding:1px;border-radius:4px;transition:background .2s}
+.sticker-bar span:hover{background:rgba(255,255,255,.1)}
+.avatar-wrap img.frm{position:absolute;inset:-6px;width:calc(100% + 12px);height:calc(100% + 12px);pointer-events:none;border-radius:0}
+.topbtns button{font-size:calc(var(--u)*1.25)}
+.rv{display:flex;flex-wrap:wrap;gap:calc(var(--u)*.5);justify-content:center;max-width:calc(var(--u)*60);margin:calc(var(--u)*1) auto;font-size:calc(var(--u)*1)}
+.rv span{padding:2px 10px;border-radius:99px;background:#1b1715;border:1px solid #444}
+.rv .mafia{color:#ff6b6b;border-color:#8b1e1e}.rv .town{color:#6bd68a}.rv .solo{color:#b98cff}
+.admin-quick{display:none;margin-top:6px}.admin-quick.on{display:block}
+
+/* ====== لابی جدید (دکمه‌های طلایی از شیت UI) ====== */
+.home{overflow-y:auto}
+.home::before{background:rgba(0,0,0,.38)!important}
+.lobby{gap:12px;padding-bottom:18px}
+.lobby>*{width:100%;max-width:560px;margin-left:auto;margin-right:auto;flex:none}
+.lobby>.lb-mid{flex:1 0 auto}
+.sp{background:none;border:0;padding:0;box-shadow:none;position:relative;display:block;cursor:pointer;border-radius:0;transition:transform .15s,filter .15s;color:inherit}
+.sp:hover:not(:disabled){transform:translateY(-2px) scale(1.02);box-shadow:none;filter:brightness(1.18) drop-shadow(0 0 8px rgba(232,196,106,.55))}
+.sp:active{transform:scale(.97)}
+.sp img{display:block;width:100%;height:auto;pointer-events:none}
+.sp .t{position:absolute;inset:0;display:grid;place-items:center;color:var(--gold);font-weight:900;text-shadow:0 2px 6px #000;font-size:clamp(.8rem,2.6vw,1.05rem)}
+.fb{display:block;padding:18px 10px;border-radius:10px;font-weight:900}
+.lb-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.lb-me{display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--glass);border:1px solid rgba(232,196,106,.45);border-radius:14px;padding:6px 14px 6px 8px;backdrop-filter:blur(8px);min-width:0}
+.lb-me b{color:var(--gold)}
+.lb-me small{display:block;color:#aaa;font-size:.7rem}
+.lb-me .cur{font-size:.8rem;color:#ddd;white-space:nowrap}
+.ringav{position:relative;width:64px;height:64px;flex:none}
+.ringav .rav{position:absolute;inset:9%;width:82%;height:82%;border-radius:50%;object-fit:cover;background:#222}
+.ringav .rring{position:absolute;inset:0;width:100%;height:100%}
+.lb-r{display:flex;gap:8px;flex:none}
+.lb-r .sp{width:62px}
+.lb-codes{display:flex;flex-direction:column;gap:6px}
+.lb-mid{display:grid;place-items:center;text-align:center;min-height:90px}
+.lb-pass{width:min(290px,72%)!important}
+.lb-start{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lb-start .col{text-align:center}
+.lb-start small{display:block;color:var(--gold);margin-top:2px;font-size:.78rem;text-shadow:0 1px 4px #000}
+.lb-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lb-icons{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.lb-icons .icw{text-align:center}
+.lb-icons span{display:block;font-size:.72rem;color:var(--gold);margin-top:3px;text-shadow:0 1px 4px #000}
+.lb-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:auto!important}
+.lb-nav .sp.active{filter:drop-shadow(0 0 10px rgba(232,196,106,.75))}
+
+/* صفحه‌های فرعی */
+.sub-wrap{width:100%;max-width:640px;margin:0 auto;padding-bottom:30px}
+.sub-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gold);padding-bottom:10px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:8px}
+.stats b{display:block;font-size:1.6rem;color:var(--gold)}.stats span{font-size:.8rem;color:var(--mute)}
+.honor{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px dashed #333;opacity:.55}
+.honor.ok{opacity:1}.honor span{font-size:1.3rem;width:30px;text-align:center}.honor b{flex:1}.honor i{font-style:normal;font-size:.75rem;color:var(--mute)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.rcard{background:var(--glass);border:1px solid rgba(232,196,106,.35);border-radius:12px;padding:10px;text-align:center;display:flex;flex-direction:column;gap:5px}
+.rcard .rimg{aspect-ratio:17/25;border-radius:8px;overflow:hidden;border:2px solid var(--gold);background:#140c0c;box-shadow:var(--gold-glow)}
+.rcard .rimg img{width:100%;height:100%;object-fit:cover}
+.rcard .ce{display:grid;place-items:center;height:100%;font-size:3rem}
+.rcard b{font-size:1rem}.rcard p{margin:0;font-size:.75rem;line-height:1.7;color:#ddd}
+.ct{font-weight:700}.ct.mafia{color:#ff6b6b}.ct.town{color:#6bd68a}.ct.solo{color:#b98cff}
+
+/* ====== پس‌زمینه‌ها (عکس‌های جدید) ====== */
+.stage,.stage.vip{background:linear-gradient(rgba(0,0,0,.82),rgba(0,0,0,.82)),url('bg_room.jpg') center/cover,#000}
+.stage::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:url('bg_room.jpg') center/auto 100% no-repeat;-webkit-mask-image:linear-gradient(90deg,transparent 16.6%,#000 24%,#000 76%,transparent 83.4%);mask-image:linear-gradient(90deg,transparent 16.6%,#000 24%,#000 76%,transparent 83.4%)}
+
+</style>
+<!-- لایه‌ی پرو: افکت‌ها، کارت نقش، گان، شب/روز، تماشاچی، ۱۶ نفره -->
+<link rel="stylesheet" href="mafia-pro.css">
+</head>
+<body>
+<div id="app"></div>
+
+<div id="splash">
+  <video id="spVideo" src="loading.mp4" autoplay muted playsinline preload="auto"></video>
+  <button id="spSound" class="ghost" type="button" aria-label="صدا">🔇</button>
+  <div class="sp-ui">
+    <h1 class="gt">MAFIA ARENA</h1>
+    <div class="load-bar"><i></i></div>
+    <div class="credit">طراحی شده با <span>تیم ویرا کد</span></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   MAFIA ARENA — لایه‌ی پایه (ظاهر mafia.html + امکانات نسخه‌ی دیپ‌سیک)
+   منطق بازی (نقش‌ها، شب/روز، گان، جلاد، ...) در mafia-pro.js است
+   و بعد از این اسکریپت لود می‌شود.
+   ============================================================ */
+
+/* ==================== CONFIG & GLOBALS ==================== */
+const ADMIN_SECRET = 'mahziar1336@';
+const USERS_KEY = 'mf_users';
+const REPORTS_KEY = 'mf_reports';
+const GIFTS_KEY = 'mf_gifts';
+const ADMIN_INFO_KEY = 'mf_admin_info';
+const RECOVERY_KEY = 'mf_admin_recovery';
+
+const AUDIO = { click:'click.mp3', night:'night.mp3', day:'day.mp3', vote:'vote.mp3' };
+
+let USERS = {};
+try { USERS = JSON.parse(localStorage.getItem(USERS_KEY) || '{}'); } catch(e) { USERS = {}; }
+const saveUsers = () => localStorage.setItem(USERS_KEY, JSON.stringify(USERS));
+
+const cfg = {
+  id:'', name:'', char:1, frame:0, coins:1500, gems:100, tokens:10, xp:0,
+  games:0, wins:0, soundEnabled:true, email:'', phone:'', referredBy:null,
+  unlockedFrames:[0]
+};
+try { Object.assign(cfg, JSON.parse(localStorage.getItem('mf_v3') || '{}')); } catch(e) {}
+if (!Array.isArray(cfg.unlockedFrames)) cfg.unlockedFrames = [0];
+const saveCfg = () => localStorage.setItem('mf_v3', JSON.stringify(cfg));
+
+let G = null;
+let adminMode = false;
+let voiceStream = null;
+let voicePeer = null;
+let avTab = null;
+const cooldowns = {};
+
+const $ = id => document.getElementById(id);
+const app = $('app');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function playSfx(n) {
+  if (!cfg.soundEnabled || !AUDIO[n]) return;
+  try { const a = new Audio(AUDIO[n]); a.volume = 0.5; a.play().catch(() => {}); } catch(e) {}
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) playSfx('click'); });
+
+/* ==================== ID GENERATION & USER DB ==================== */
+function generateId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id;
+  do {
+    id = 'P-';
+    for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  } while (USERS[id]);
+  return id;
+}
+
+function registerUser() {
+  if (!cfg.id || !USERS[cfg.id]) {
+    if (!cfg.id) cfg.id = generateId();
+    USERS[cfg.id] = {
+      name: cfg.name || 'Player',
+      coins: cfg.coins || 1500,
+      gems: cfg.gems || 100,
+      banned: false,
+      referredBy: cfg.referredBy || null,
+      joined: new Date().toISOString()
+    };
+    saveUsers();
+    saveCfg();
+  } else {
+    // Sync cfg with USERS
+    cfg.coins = USERS[cfg.id].coins;
+    cfg.gems = USERS[cfg.id].gems;
+    cfg.name = USERS[cfg.id].name;
+    saveCfg();
+  }
+}
+
+function syncUser() {
+  if (!cfg.id || !USERS[cfg.id]) return;
+  USERS[cfg.id].name = cfg.name;
+  USERS[cfg.id].coins = cfg.coins;
+  USERS[cfg.id].gems = cfg.gems;
+  saveUsers();
+}
+
+function checkBan() {
+  if (!cfg.id || !USERS[cfg.id]) return false;
+  if (USERS[cfg.id].banned) {
+    document.body.innerHTML = `
+      <div class="ban-screen">
+        <h1>⛔ دسترسی مسدود شد</h1>
+        <p>شما توسط مدیر از بازی بن شده‌اید.</p>
+        <p style="color:var(--mute);margin-top:10px">ID شما: ${esc(cfg.id)}</p>
+      </div>`;
+    return true;
+  }
+  return false;
+}
+
+/* ==================== AVATARS & FRAMES ==================== */
+const AVATAR_SETS = [['🎌 انیمه','free',10,0],['🕴️ مافیا','mafia',10,10],['🗿 مجسمه','statue',20,20]];
+const AVATARS = AVATAR_SETS.flatMap(([,pre,n]) => Array.from({length:n}, (_,i) => `${pre}-${i+1}.png`));
+const FRAMES = [
+  { id:0, img:'', price:0, name:'بدون قاب' },
+  { id:1, img:'frame-1.png', price:150, name:'تاج طلایی' },
+  { id:2, img:'frame-2.png', price:200, name:'مرمر رومی' },
+  { id:3, img:'frame-3.png', price:180, name:'گلادیاتور آبی' },
+  { id:4, img:'frame-4.png', price:300, name:'یاقوت سرخ' },
+  { id:5, img:'frame-5.png', price:250, name:'ستون شکسته' },
+  { id:6, img:'frame-6.png', price:400, name:'میکروفن طلایی' },
+  { id:7, img:'frame-7.png', price:180, name:'نئون صورتی' },
+  { id:8, img:'frame-8.png', price:220, name:'سنگ و زیتون' },
+  { id:9, img:'frame-9.png', price:160, name:'الماس آبی' },
+  { id:10, img:'frame-10.png', price:220, name:'چهره مرمری' },
+  { id:11, img:'frame-11.png', price:350, name:'عقاب بنفش' },
+  { id:12, img:'frame-12.png', price:320, name:'تاج سلطنتی' },
+  { id:13, img:'frame-13.png', price:280, name:'ستون نئونی' },
+  { id:14, img:'frame-14.png', price:380, name:'میکروفن آبی' },
+  { id:15, img:'frame-15.png', price:190, name:'نئون بنفش' },
+  { id:16, img:'frame-16.png', price:240, name:'سنگ سیاه' },
+  { id:17, img:'frame-17.png', price:360, name:'کلاه اسپارتی' }
+];
+
+/* ==================== CARD IMAGES (کارت نقش‌ها: card-1 تا card-16) ==================== */
+// عکس کارت را با چند اسم/پسوند/پوشه‌ی رایج امتحان می‌کند (card-1.png ، card-1.jpg ، card-01.webp ، cards/card-1.png ...)
+// اگر هیچ‌کدام پیدا نشد، به‌جای ایموجی خالی یک کادر با اسم فایل مورد انتظار نشان می‌دهد.
+const CARD_OK = {};
+const CARD_DIRS = ['', 'cards/', 'roles/'];
+const CARD_EXTS = ['png', 'jpg', 'jpeg', 'webp'];
+const cardCands = n => CARD_DIRS.flatMap(d => [`card-${n}`, `card_${n}`, `card-${String(n).padStart(2,'0')}`].flatMap(b => CARD_EXTS.map(x => `${d}${b}.${x}`)));
+function cardImg(n, emoji, name) {
+  const c = cardCands(n);
+  return `<img class="cardimg" src="${CARD_OK[n] || c[0]}" data-n="${n}" data-i="0" data-e="${esc(emoji || '🃏')}" alt="${esc(name || 'card ' + n)}" onload="CARD_OK[this.dataset.n]=this.getAttribute('src')" onerror="cardFail(this)">`;
+}
+function cardFail(img) {
+  const n = +img.dataset.n, c = cardCands(n), i = +img.dataset.i + 1;
+  if (i < c.length) { img.dataset.i = i; img.src = c[i]; return; }
+  const d = document.createElement('div');
+  d.className = 'cardmiss';
+  d.innerHTML = `<div class="ce">${img.dataset.e}</div><small>card-${n}.png</small>`;
+  img.replaceWith(d);
+}
+
+/* ==================== RULES ==================== */
+const RULES_DB = [
+  { title:'قوانین رسمی سناریو تریپل', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها به سایر بازیکنان آزاد است.</p>
+    <p>۱-۲: تأیید و رد نقش‌های مافیایی برای خود و دیگران آزاد است.</p>
+    <p>۱-۳: تأیید نقش‌های شهروندی برای خود ممنوع است.</p>
+    <p>۱-۴: رد نقش‌های شهروندی (جز ساده) آزاد است.</p>
+    <p>۱-۵: ابیلیتی‌ها نیز طبق قوانین بالا هستند.</p>
+    <p>۱-۶: تخلفات برای شهروند = کشته شدن در شب؛ برای مافیا آزاد.</p>
+    <p><strong>۲- روند تریپل:</strong></p>
+    <p>۲-۱: اگر نفر بعدی مشخص نشود، انتخاب‌کننده کشته می‌شود.</p>
+    <p>۲-۲: رأی دادن اختیاری است.</p>
+    <p><strong>۳- دیالوگ‌ها:</strong></p>
+    <p>۳-۱: دکتر باید با استدلال کاور کند.</p>
+    <p>۳-۲: بازپرس با استدلال معتبر تارگت بزند.</p>
+    <p>۳-۳: آهنگر بدون استدلال کاور نکند.</p>
+    <p>۳-۴: قاضی قابلیت خود را افشا نکند.</p>
+    <p>۳-۵: چاتاتان پس از شلیک شادی نکند.</p>
+    <p>۳-۶: موئیکا قبل از سکوت هشدار ندهد.</p>
+    <p>۳-۷: کارولین از مافیا نخواهد او را بزنند.</p>
+  `},
+  { title:'قوانین رسمی سناریو تکاور', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد است.</p>
+    <p>۱-۲: تأیید/رد مافیایی آزاد است.</p>
+    <p>۱-۳: تأیید شهروندی برای خود ممنوع است.</p>
+    <p>۱-۴: رد شهروندی (جز ساده) آزاد است.</p>
+    <p>۱-۵: تأیید/رد نقش‌دار بودن خود ممنوع است.</p>
+    <p>۱-۶: اعلام گروگانگیری خود ممنوع است.</p>
+    <p>۱-۷: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۸: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- قوانین گان:</strong></p>
+    <p>۲-۱: مسیر دادن به گان‌دار ممنوع است.</p>
+    <p>۲-۲: افشای نقش تفنگداری ممنوع است.</p>
+    <p>۲-۳: اعلام وجود گان بدون استدلال ممنوع است.</p>
+    <p>۲-۴: استفاده نکردن از گان آزاد است.</p>
+    <p>۲-۵: اعلام گان در ترن، باید همان ترن شلیک کند.</p>
+    <p><strong>۳- دیالوگ‌ها:</strong></p>
+    <p>۳-۱: دکتر با استدلال کاور کند.</p>
+    <p>۳-۲: کارآگاه با استدلال تارگت بزند.</p>
+    <p>۳-۳: نگهبان درخواست خروج خود نکند.</p>
+    <p>۳-۴: تکاور پس از شلیک شادی نکند.</p>
+    <p>۳-۵: درخواست شیلد برای خود ممنوع است.</p>
+    <p>۳-۶: افشای عدم وجود قابلیت ممنوع است.</p>
+  `},
+  { title:'قوانین رسمی سناریو زودیاک', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد است.</p>
+    <p>۱-۲: تأیید/رد مافیایی و مستقل آزاد است.</p>
+    <p>۱-۳: تأیید شهروندی برای خود ممنوع است.</p>
+    <p>۱-۴: رد شهروندی (جز ساده) آزاد است.</p>
+    <p>۱-۵: تأیید/رد نقش‌دار بودن خود ممنوع است.</p>
+    <p>۱-۶: اعلام قطعی شبیه/دیفیوز ممنوع است.</p>
+    <p>۱-۷: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۸: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- لینک اوشن:</strong></p>
+    <p>۲-۱: اعضای اوشن حق اعلام نقش ندارند.</p>
+    <p>۲-۲: کار کردن بدون استدلال ممنوع است.</p>
+    <p>۲-۳: تأیید بیدار شدن ممنوع است.</p>
+    <p>۲-۴: تارگت با استدلال آزاد است.</p>
+    <p><strong>۳- قوانین گان:</strong></p>
+    <p>۳-۱: مسیر دادن به گان‌دار ممنوع.</p>
+    <p>۳-۲: افشای تفنگداری ممنوع.</p>
+    <p>۳-۳: اعلام گان بدون استدلال ممنوع.</p>
+    <p>۳-۴: استفاده نکردن آزاد.</p>
+    <p>۳-۵: اعلام گان در ترن = شلیک در همان ترن.</p>
+    <p><strong>۴- دیالوگ‌ها:</strong></p>
+    <p>۴-۱: دکتر با استدلال.</p>
+    <p>۴-۲: کارآگاه با استدلال.</p>
+    <p>۴-۳: محافظ درخواست شات خود نکند.</p>
+    <p>۴-۴: افشای خنثی‌سازی بمب ممنوع.</p>
+    <p>۴-۵: درخواست بمب آزاد.</p>
+    <p>۴-۶: افشای عدم وجود قابلیت ممنوع.</p>
+    <p>۴-۷: حرفه‌ای پس از شلیک شادی نکند.</p>
+  `},
+  { title:'قوانین رسمی سناریو کاپو', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد.</p>
+    <p>۱-۲: تأیید/رد مافیایی آزاد (حتی پاک‌سازی).</p>
+    <p>۱-۳: تأیید شهروندی برای خود ممنوع.</p>
+    <p>۱-۴: رد شهروندی (جز مظنون و ساده) آزاد.</p>
+    <p>۱-۵: تأیید/رد نقش‌دار بودن خود ممنوع.</p>
+    <p>۱-۶: تأیید سوداگری آزاد.</p>
+    <p>۱-۷: تأیید امکان سوداگری بر خود ممنوع.</p>
+    <p>۱-۸: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۹: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- انتخاب معتمد:</strong></p>
+    <p>۲-۱: شرکت همه در رأی‌گیری الزامی است.</p>
+    <p>۲-۲: ساید فرد کشته‌شده اعلام نمی‌شود.</p>
+    <p><strong>۳- دیالوگ‌ها:</strong></p>
+    <p>۳-۱: زره‌ساز با استدلال کاور کند.</p>
+    <p>۳-۲: کارآگاه با استدلال تارگت بزند.</p>
+    <p>۳-۳: وارث درخواست شات خود نکند.</p>
+    <p>۳-۴: عطار زهر را افشا نکند.</p>
+    <p>۳-۵: کدخدا لینک را افشا نکند.</p>
+    <p>۳-۶: گرای سوداگری و افشای عدم قابلیت ممنوع.</p>
+    <p>۳-۷: تخلف شهروند = کشته شدن در شب.</p>
+  `},
+  { title:'قوانین رسمی سناریو کاور', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد.</p>
+    <p>۱-۲: تأیید/رد مافیایی آزاد (حتی پاک‌سازی).</p>
+    <p>۱-۳: تأیید شهروندی برای خود ممنوع.</p>
+    <p>۱-۴: رد شهروندی (جز رویین‌تن و ساده) آزاد.</p>
+    <p>۱-۵: تأیید/رد نقش‌دار بودن خود ممنوع.</p>
+    <p>۱-۶: تأیید سوداگری آزاد.</p>
+    <p>۱-۷: تأیید امکان سوداگری بر خود ممنوع.</p>
+    <p>۱-۸: درخواست گادفادر شدن آزاد.</p>
+    <p>۱-۹: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۱۰: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- بازپرسی:</strong></p>
+    <p>۲-۱: شرکت در رأی‌گیری بازپرسی الزامی.</p>
+    <p>۲-۲: ساید فرد کشته‌شده اعلام نمی‌شود.</p>
+    <p><strong>۳- دیالوگ‌ها:</strong></p>
+    <p>۳-۱: پزشک با استدلال کاور کند.</p>
+    <p>۳-۲: کارآگاه با استدلال تارگت بزند.</p>
+    <p>۳-۳: رویین‌تن درخواست شات خود نکند.</p>
+    <p>۳-۴: محقق درخواست خروج مکرر نکند.</p>
+    <p>۳-۵: تک‌تیرانداز پس از شلیک شادی نکند.</p>
+    <p>۳-۶: گرای سوداگری و افشای عدم قابلیت ممنوع.</p>
+    <p>۳-۷: تخلف شهروند = کشته شدن در شب.</p>
+  `},
+  { title:'قوانین رسمی سناریو کلاسیک', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد.</p>
+    <p>۱-۲: تأیید/رد مافیایی و طرفدار آزاد.</p>
+    <p>۱-۳: تأیید ساده آزاد، دکتر/کارآگاه ممنوع.</p>
+    <p>۱-۴: رد شهروندی (جز ساده) آزاد.</p>
+    <p>۱-۵: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۶: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- دیالوگ‌ها:</strong></p>
+    <p>۲-۱: پزشک با استدلال کاور کند.</p>
+    <p>۲-۲: کارآگاه با استدلال تارگت بزند.</p>
+    <p>۲-۳: کارآگاه گادفادر را در استعلام اول افشا نکند.</p>
+    <p>۲-۴: تخلف شهروند = کشته شدن در شب.</p>
+  `},
+  { title:'قوانین رسمی سناریو مذاکره‌کننده', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد.</p>
+    <p>۱-۲: تأیید/رد مافیایی آزاد (حتی مذاکره).</p>
+    <p>۱-۳: تأیید شهروندی برای خود ممنوع.</p>
+    <p>۱-۴: رد شهروندی (جز ساده) آزاد.</p>
+    <p>۱-۵: تأیید/رد نقش‌دار بودن خود ممنوع.</p>
+    <p>۱-۶: تأیید مذاکره آزاد.</p>
+    <p>۱-۷: تأیید امکان مذاکره بر خود ممنوع.</p>
+    <p>۱-۸: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۹: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- دیالوگ‌ها:</strong></p>
+    <p>۲-۱: دکتر با استدلال کاور کند.</p>
+    <p>۲-۲: کارآگاه با استدلال تارگت بزند.</p>
+    <p>۲-۳: تک‌تیرانداز پس از شلیک شادی نکند.</p>
+    <p>۲-۴: خبرنگار با استدلال افشا کند.</p>
+    <p>۲-۵: زره‌پوش درخواست شات خود نکند.</p>
+    <p>۲-۶: گرای مذاکره و افشای عدم قابلیت ممنوع.</p>
+    <p>۲-۷: تخلف شهروند = کشته شدن در شب.</p>
+  `},
+  { title:'قوانین رسمی سناریو نماینده', content:`
+    <p><strong>۱- فلسفه چسباندن:</strong></p>
+    <p>۱-۱: چسباندن تمامی نقش‌ها آزاد.</p>
+    <p>۱-۲: تأیید/رد مافیایی آزاد (استثنا یاغی).</p>
+    <p>۱-۳: تأیید شهروندی برای خود ممنوع.</p>
+    <p>۱-۴: رد شهروندی (جز ساده) آزاد.</p>
+    <p>۱-۵: تأیید/رد نقش‌دار بودن خود ممنوع.</p>
+    <p>۱-۶: ابیلیتی‌ها طبق قوانین بالا.</p>
+    <p>۱-۷: تخلف شهروند = کشته شدن در شب.</p>
+    <p><strong>۲- انتخاب نمایندگان:</strong></p>
+    <p>۲-۱: شرکت در رأی‌گیری الزامی.</p>
+    <p>۲-۲: ساید فرد کشته‌شده اعلام نمی‌شود.</p>
+    <p>۲-۳: مافیا باید رأی خیانت بدهد.</p>
+    <p>۲-۴: نماینده بدون تارگت حذف می‌شود.</p>
+    <p><strong>۳- دیالوگ‌ها:</strong></p>
+    <p>۳-۱: پزشک با استدلال.</p>
+    <p>۳-۲: راهنما با استدلال.</p>
+    <p>۳-۳: اعلام یاغی جز در روز معارضه ممنوع.</p>
+    <p>۳-۴: سرباز پس از شلیک شادی نکند.</p>
+    <p>۳-۵: راهنما انتخاب خود را افشا نکند.</p>
+    <p>۳-۶: افشای عدم قابلیت ممنوع.</p>
+    <p>۳-۷: وکیل نقش خود را افشا نکند.</p>
+    <p>۳-۸: تخلف شهروند = کشته شدن در شب.</p>
+  `},
+  { title:'قوانین گردانندگی — BTRoyale', content:`
+    <p><strong>۳- اخطار و تخلف:</strong></p>
+    <p>۳-۱: دیس‌کانکتی در شب = اخطار، تکرار = اخراج.</p>
+    <p>۳-۲: اخطار اول جمعی، دوم سلب رأی، سوم اخراج.</p>
+    <p>۳-۳: وقاحت/اطلاق برای شهروند در ۶ نفر به پایین ممنوع.</p>
+    <p>۳-۴: سبک اگزره مجاز تا حدی که جو را خراب نکند.</p>
+    <p><strong>۴- دیس‌کانکتی و کیک:</strong></p>
+    <p>۴-۱: دیس‌کانکتی بعد از روز یک = خیانت به ساید.</p>
+    <p>۴-۲: ساید کیک انضباطی پس از رأی‌گیری دوم خوانده می‌شود.</p>
+    <p>۴-۳: فرآیند درخواست کیک در چت.</p>
+    <p><strong>۵- فاز پایانی:</strong></p>
+    <p>۵-۱: کنس در سه نفر پایانی ممنوع.</p>
+  `}
+];
+
+/* ==================== UTILS ==================== */
+function render(html) {
+  document.body.classList.remove('in-room');
+  app.innerHTML = html;
+}
+
+function showToast(msg, type = 'info') {
+  let t = $('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.style.background = type === 'error' ? 'linear-gradient(180deg,#c0392b,#7b241c)' : 'linear-gradient(180deg,var(--gold),#a8791f)';
+  t.style.color = type === 'error' ? '#fff' : '#000';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.opacity = '0', 2800);
+}
+
+function getFingerprint() {
+  const nav = window.navigator, scr = window.screen;
+  const str = nav.userAgent + nav.language + scr.colorDepth + scr.width + scr.height + new Date().getTimezoneOffset() + nav.hardwareConcurrency;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'DEV-' + Math.abs(hash).toString(16).toUpperCase();
+}
+
+async function getIP() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    return d.ip;
+  } catch(e) {
+    return 'نامشخص (آفلاین)';
+  }
+}
+
+function toggleFull() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+}
+
+/* ==================== SPLASH / INIT ==================== */
+function initApp() {
+  registerUser();
+  if (checkBan()) return;
+  showLobby();
+}
+
+let splashDone = false;
+function endSplash() {
+  if (splashDone) return;
+  splashDone = true;
+  const sp = $('splash');
+  if (sp) sp.classList.add('out');
+  setTimeout(() => sp?.remove(), 1000);
+  initApp();
+}
+(function initSplash() {
+  const v = $('spVideo'), snd = $('spSound');
+  if (!v) { setTimeout(endSplash, 3500); return; }
+  v.addEventListener('ended', endSplash);
+  v.addEventListener('error', () => setTimeout(endSplash, 1500));
+  snd?.addEventListener('click', () => { v.muted = !v.muted; snd.textContent = v.muted ? '🔇' : '🔊'; });
+  const p = v.play();
+  if (p && p.catch) p.catch(() => setTimeout(endSplash, 3500));
+  setTimeout(endSplash, 10000); // سقف زمانی ایمن
+})();
+
+/* ==================== LOBBY (UI با دکمه‌های طلایی) ==================== */
+const comingSoon = n => showToast(`${n} به‌زودی اضافه می‌شود 🚧`);
+
+function showLobby() {
+  const info = JSON.parse(localStorage.getItem(ADMIN_INFO_KEY) || 'null');
+  const showAdminQuick = adminMode || (info && info.fingerprint === getFingerprint());
+  const frame = FRAMES[cfg.frame]?.img || '';
+  const icons = [
+    ['rules','قوانین','showRules()'],
+    ['honors','افتخارات','showHonors()'],
+    ['ranking','رده‌بندی','showRanking()'],
+    ['history','تاریخچه','showHistory()'],
+    ['settings','تنظیمات','showSettings()'],
+    ['support','پشتیبانی','showReportModal()']
+  ];
+  const nav = [
+    ['profile','showProfile()',''],
+    ['shop','openShop()',''],
+    ['home','showLobby()','active'],
+    ['missions',"comingSoon('ماموریت‌ها')",''],
+    ['clan',"comingSoon('کلن')",'']
+  ];
+  render(`
+    <div class="home lobby">
+      <div class="lb-top">
+        <div class="lb-me" onclick="showProfile()">
+          <div class="ringav">
+            <img class="rav" src="${AVATARS[cfg.char-1] || AVATARS[0]}" onerror="this.style.background='#333'">
+            ${frame ? `<div class="frame-overlay" style="background-image:url('${frame}')"></div>` : `<img class="rring" src="ui/ring.png" onerror="this.remove()">`}
+          </div>
+          <div>
+            <b>${esc(cfg.name || 'Player')}</b>
+            <small>ID: ${esc(cfg.id)}</small>
+            <div class="cur">🪙 ${cfg.coins} &nbsp;💎 ${cfg.gems} &nbsp;🎟️ ${cfg.tokens}</div>
+          </div>
+        </div>
+        <div class="lb-r">
+          <button class="sp" onclick="claimDaily()" aria-label="هدیه روزانه"><img src="ui/gift.png" alt="هدیه روزانه" onerror="this.outerHTML='🎁'"></button>
+          <button class="sp" onclick="showRoles()" aria-label="آموزش"><img src="ui/tutorial.png" alt="آموزش" onerror="this.outerHTML='📘'"></button>
+        </div>
+      </div>
+
+      <div class="lb-codes">
+        <!-- کد دعوت (در نسخه‌ی پرو به پروفایل منتقل می‌شود) -->
+        <div class="gift-bar">
+          <span>🎁 کد دعوت:</span>
+          <input type="text" id="refCode" placeholder="ID دوست خود را وارد کنید" autocomplete="off">
+          <button class="gb" onclick="applyReferral()">دریافت ۵۰۰ سکه</button>
+        </div>
+        ${cfg.referredBy ? `<div style="text-align:center;font-size:.75rem;color:var(--green)">✅ شما قبلاً از کد دعوت استفاده کرده‌اید.</div>` : ''}
+        <!-- کد هدیه -->
+        <div class="gift-bar">
+          <span>🎁 کد هدیه:</span>
+          <input type="password" id="giftCode" placeholder="کد هدیه را وارد کنید" autocomplete="off">
+          <button class="gb" onclick="redeemGiftCode()">تأیید</button>
+        </div>
+      </div>
+
+      <div id="adminQuickBtn" class="admin-quick ${showAdminQuick ? 'on' : ''}">
+        <button class="gb" style="width:100%" onclick="openAdminPanel()">👑 ورود به پنل مدیریت</button>
+      </div>
+
+      <div class="lb-mid">
+        <div>
+          <h1 class="gt" style="font-size:3rem;margin:0">MAFIA</h1>
+          <p style="color:var(--gold);letter-spacing:3px;margin:4px 0 0">ROMAN ARENA</p>
+        </div>
+      </div>
+
+      <button class="sp lb-pass" onclick="comingSoon('بتل‌پس')"><img src="ui/pass.png" alt="Battle Pass" onerror="this.parentNode.remove()"></button>
+
+      <div class="lb-start">
+        <div class="col">
+          <button class="sp" onclick="startGame('normal')"><img src="ui/start-black.png" alt="شروع بازی" onerror="this.outerHTML='<span class=&quot;fb gb&quot;>⚔️ شروع بازی</span>'"></button>
+          <small>روم عادی • ۱ توکن</small>
+        </div>
+        <div class="col">
+          <button class="sp" onclick="startGame('vip')"><img src="ui/start-red.png" alt="شروع بازی VIP" onerror="this.outerHTML='<span class=&quot;fb gb&quot;>👑 شروع VIP</span>'"></button>
+          <small>روم VIP • ۳ توکن</small>
+        </div>
+      </div>
+
+      <div class="lb-row2">
+        <button class="sp" onclick="showCreateRoom()"><img src="ui/hex-blank.png" alt=""><span class="t">➕ ساخت لابی</span></button>
+        <button class="sp" onclick="showJoinRoom()"><img src="ui/hex-blank.png" alt=""><span class="t">🔍 ورود با کد</span></button>
+      </div>
+
+      <div class="lb-icons">
+        ${icons.map(([k,n,f]) => `
+          <div class="icw">
+            <button class="sp" onclick="${f}" aria-label="${n}"><img src="ui/ic-${k}.png" alt="${n}"></button>
+            <span>${n}</span>
+          </div>`).join('')}
+      </div>
+
+      <div class="lb-nav">
+        ${nav.map(([k,f,c]) => `<button class="sp ${c}" onclick="${f}"><img src="ui/nav-${k}.png" alt="${k}"></button>`).join('')}
+      </div>
+    </div>
+  `);
+}
+
+/* ---- صفحه‌ی فرعی عمومی ---- */
+function subpage(title, body) {
+  render(`
+    <div class="home" style="overflow-y:auto;background:#0a0806">
+      <div class="sub-wrap">
+        <div class="sub-head">
+          <button class="ghost" style="padding:6px 12px;border-radius:20px" onclick="showLobby()">→ بازگشت</button>
+          <h2 class="gt" style="margin:0;font-size:1.3rem">${title}</h2>
+          <div style="width:70px"></div>
+        </div>
+        ${body}
+      </div>
+    </div>`);
+}
+
+function openShop() { showProfile(); setTimeout(() => $('frames')?.scrollIntoView({ behavior:'smooth' }), 80); }
+
+/* ---- هدیه‌ی روزانه ---- */
+function claimDaily() {
+  const today = new Date().toDateString();
+  if (cfg.lastDaily === today) return showToast('هدیه‌ی امروز را قبلاً گرفته‌اید؛ فردا دوباره بیایید 🎁', 'error');
+  cfg.lastDaily = today;
+  cfg.coins += 200; cfg.tokens += 1;
+  syncUser(); saveCfg();
+  showToast('🎁 هدیه‌ی روزانه: ۲۰۰ سکه + ۱ توکن');
+  showLobby();
+}
+
+/* ---- آموزش: کارت و توضیح همه‌ی نقش‌ها ---- */
+function showRoles() {
+  const RL = window.MF_RL, TN = window.MF_TN;
+  if (!RL) return showToast('اطلاعات نقش‌ها هنوز لود نشده', 'error');
+  const order = ['mafia','town','solo'];
+  const groups = order.map(t => {
+    const items = Object.entries(RL).filter(([,r]) => r.t === t).map(([k,r]) => `
+      <div class="rcard">
+        <div class="rimg">${cardImg(r.c,r.e,r.n)}</div>
+        <b class="gt">${r.n}</b>
+        <span class="ct ${r.t}">${r.e} ${TN[r.t]}</span>
+        <p>${r.d}</p>
+      </div>`).join('');
+    return `<h3 class="ct ${t}" style="margin:18px 0 8px">${TN[t]}</h3><div class="rgrid">${items}</div>`;
+  }).join('');
+  subpage('📘 آموزش و نقش‌ها', `
+    <div class="settings-card" style="font-size:.85rem;line-height:1.9;color:#ddd">
+      هر شب مافیا یک نفر را می‌زند و نقش‌های ویژه توانایی‌شان را به کار می‌برند؛ هر روز همه نوبتی صحبت می‌کنند و در پایان به یک نفر رأی می‌دهند.
+      تیم شهر وقتی برنده است که همه‌ی مافیاها حذف شوند، و مافیا وقتی که تعدادش به نصف بازیکنان زنده برسد.
+      کارت نقش خودت را داخل بازی با زدن روی کادر پایین صحنه دوباره می‌بینی.
+    </div>
+    ${groups}`);
+}
+
+/* ---- افتخارات ---- */
+function showHonors() {
+  const rate = cfg.games ? Math.round(cfg.wins / cfg.games * 100) : 0;
+  const list = [
+    ['🎖️','اولین بازی', cfg.games >= 1],
+    ['🏆','اولین پیروزی', cfg.wins >= 1],
+    ['⭐','۵ پیروزی', cfg.wins >= 5],
+    ['👑','۲۰ پیروزی', cfg.wins >= 20],
+    ['🖼️','دارنده‌ی قاب اختصاصی', cfg.unlockedFrames.length > 1],
+    ['🤝','دعوت با کد دوست', !!cfg.referredBy]
+  ];
+  subpage('🏅 افتخارات', `
+    <div class="settings-card stats">
+      <div><b>${cfg.games}</b><span>بازی</span></div>
+      <div><b>${cfg.wins}</b><span>برد</span></div>
+      <div><b>${rate}٪</b><span>درصد برد</span></div>
+    </div>
+    <div class="settings-card">
+      ${list.map(([e,n,ok]) => `<div class="honor ${ok ? 'ok' : ''}"><span>${e}</span><b>${n}</b><i>${ok ? '✅ دریافت شد' : '🔒 قفل'}</i></div>`).join('')}
+    </div>`);
+}
+
+/* ---- رده‌بندی (بازیکنان همین دستگاه) ---- */
+function showRanking() {
+  const rows = Object.entries(USERS).sort((a,b) => b[1].coins - a[1].coins).slice(0, 15);
+  subpage('📊 رده‌بندی', `
+    <div class="settings-card">
+      ${rows.map(([id,u],i) => `<div class="honor ${id === cfg.id ? 'ok' : ''}"><span>${i+1}</span><b>${esc(u.name || id)}</b><i>🪙 ${u.coins} &nbsp;💎 ${u.gems}</i></div>`).join('') || '<p style="color:var(--mute)">هنوز بازیکنی ثبت نشده.</p>'}
+      <p style="color:var(--mute);font-size:.75rem;margin:10px 0 0">این رده‌بندی فقط بازیکنان ثبت‌شده روی همین مرورگر را نشان می‌دهد.</p>
+    </div>`);
+}
+
+/* ---- تاریخچه‌ی بازی‌ها ---- */
+function showHistory() {
+  const h = (cfg.history || []).slice().reverse();
+  subpage('⏳ تاریخچه', `
+    <div class="settings-card">
+      ${h.map(g => `<div class="honor ${g.won ? 'ok' : ''}"><span>${g.won ? '🏆' : '💀'}</span><b>${esc(g.role || '')}</b><i>${g.n || 10} نفره • ${new Date(g.t).toLocaleString('fa-IR')}</i></div>`).join('') || '<p style="color:var(--mute)">هنوز بازی‌ای انجام نداده‌اید.</p>'}
+    </div>`);
+}
+
+
+/* ==================== REFERRAL / GIFT CODE ==================== */
+function applyReferral() {
+  if (cfg.referredBy) return showToast('شما قبلاً از کد دعوت استفاده کرده‌اید', 'error');
+  const code = $('refCode').value.trim().toUpperCase();
+  if (!code) return showToast('کد را وارد کنید', 'error');
+  if (code === cfg.id) return showToast('نمی‌توانید از کد خودتان استفاده کنید', 'error');
+  if (!USERS[code]) return showToast('کد دعوت نامعتبر است', 'error');
+  
+  // اعطای جایزه
+  cfg.coins += 500;
+  USERS[code].coins += 500;
+  cfg.referredBy = code;
+  syncUser();
+  saveCfg();
+  saveUsers();
+  
+  showToast('🎉 ۵۰۰ سکه دریافت کردید! دوست شما هم ۵۰۰ سکه گرفت.');
+  showLobby();
+}
+
+async function redeemGiftCode() {
+  const code = $('giftCode').value.trim();
+  if (!code) return showToast('کد را وارد کنید', 'error');
+  
+  if (code === ADMIN_SECRET) {
+    await openAdminPanel();
+    return;
+  }
+  
+  const recovery = localStorage.getItem(RECOVERY_KEY);
+  if (recovery && code === recovery) {
+    await openAdminPanel();
+    return;
+  }
+  
+  if (code.startsWith('GIFT')) {
+    cfg.coins += 500;
+    syncUser();
+    saveCfg();
+    showToast('🎁 ۵۰۰ سکه دریافت کردید!');
+    showLobby();
+    return;
+  }
+  
+  showToast('کد هدیه نامعتبر است', 'error');
+}
+
+/* ==================== ADMIN PANEL ==================== */
+async function openAdminPanel() {
+  adminMode = true;
+  showToast('👑 خوش آمدید، مدیر');
+  
+  const ip = await getIP();
+  const fp = getFingerprint();
+  
+  let info = JSON.parse(localStorage.getItem(ADMIN_INFO_KEY) || 'null');
+  if (!info) {
+    const recoveryCode = 'REC-' + Math.random().toString(36).slice(2,6).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+    localStorage.setItem(RECOVERY_KEY, recoveryCode);
+    info = { ip, fingerprint: fp, firstLogin: new Date().toISOString(), lastLogin: new Date().toISOString() };
+    localStorage.setItem(ADMIN_INFO_KEY, JSON.stringify(info));
+  } else {
+    info.lastLogin = new Date().toISOString();
+    localStorage.setItem(ADMIN_INFO_KEY, JSON.stringify(info));
+  }
+  
+  const recoveryCode = localStorage.getItem(RECOVERY_KEY);
+  const reports = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+  const gifts = JSON.parse(localStorage.getItem(GIFTS_KEY) || '[]');
+  
+  const userList = Object.entries(USERS).map(([id, u]) => 
+    `<div class="info-row" style="font-size:.8rem">
+      <span>${esc(id)} (${esc(u.name)}) ${u.banned ? '⛔' : ''}</span>
+      <span>🪙${u.coins} 💎${u.gems}</span>
+    </div>`
+  ).join('');
+  
+  app.innerHTML = `
+    <div class="admin-panel">
+      <div class="admin-header">
+        <h2 class="gt" style="margin:0;font-size:1.3rem">👑 پنل مدیریت</h2>
+        <button class="ghost" style="padding:6px 12px;font-size:.85rem" onclick="closeAdminPanel()">بازگشت</button>
+      </div>
+      
+      <div class="admin-grid">
+        <div class="admin-card">
+          <h3>🆔 شناسایی مدیر</h3>
+          <div class="info-row"><span>ID مدیر:</span><b>${esc(cfg.id)}</b></div>
+          <div class="info-row"><span>IP:</span><b>${esc(ip)}</b></div>
+          <div class="info-row"><span>شناسه دستگاه:</span><b>${esc(fp)}</b></div>
+          <div class="info-row"><span>کد بازیابی:</span><b style="color:var(--green);font-family:monospace">${esc(recoveryCode)}</b></div>
+        </div>
+        
+        <div class="admin-card">
+          <h3>💰 منابع مدیر</h3>
+          <div class="info-row"><span>سکه:</span><b class="inf-badge">∞</b></div>
+          <div class="info-row"><span>جم:</span><b class="inf-badge">∞</b></div>
+          <div class="info-row"><span>توکن:</span><b class="inf-badge">∞</b></div>
+          <button class="gb" style="margin-top:8px;width:100%" onclick="setInfiniteResources()">⚡ اعمال منابع بی‌نهایت</button>
+        </div>
+        
+        <div class="admin-card">
+          <h3>🎁 ارسال گیفت (بر اساس ID)</h3>
+          <input type="text" id="giftId" placeholder="ID بازیکن (مثال: P-AB12CD)" style="width:100%;margin-bottom:8px;text-transform:uppercase">
+          <input type="number" id="giftCoins" placeholder="تعداد سکه" value="1000" style="width:100%;margin-bottom:8px">
+          <input type="number" id="giftGems" placeholder="تعداد جم" value="100" style="width:100%;margin-bottom:8px">
+          <button class="gb" style="width:100%" onclick="sendAdminGift()">ارسال گیفت</button>
+          <div style="margin-top:10px">
+            ${gifts.length === 0 ? '<p style="color:var(--mute);font-size:.8rem">هیچ گیفتی ارسال نشده.</p>' : gifts.slice(-5).reverse().map(g => `<div class="gift-sent">🎁 ${esc(g.targetId)} ← ${g.coins} سکه، ${g.gems} جم</div>`).join('')}
+          </div>
+        </div>
+        
+        <div class="admin-card">
+          <h3>⛔ بن / آنبن کاربران</h3>
+          <input type="text" id="banId" placeholder="ID کاربر" style="width:100%;margin-bottom:8px;text-transform:uppercase">
+          <div class="admin-actions">
+            <button class="gb" onclick="banUser(true)">بن کردن</button>
+            <button class="ghost" style="border-color:var(--green);color:var(--green)" onclick="banUser(false)">آنبن کردن</button>
+          </div>
+          <p style="color:var(--mute);font-size:.75rem;margin-top:6px">کاربر بن‌شده هنگام ورود پیام مسدود بودن را می‌بیند.</p>
+        </div>
+        
+        <div class="admin-card">
+          <h3>👥 لیست کاربران</h3>
+          <div style="max-height:150px;overflow-y:auto">${userList || '<p style="color:var(--mute)">هیچ کاربری ثبت نشده.</p>'}</div>
+        </div>
+        
+        <div class="admin-card">
+          <h3>🚨 گزارش‌ها</h3>
+          ${reports.length === 0 ? '<p style="color:var(--mute);font-size:.85rem">هیچ گزارشی یافت نشد.</p>' : reports.slice(-10).reverse().map(r => `
+            <div class="report-item">
+              <div class="time">${new Date(r.timestamp).toLocaleString('fa-IR')}</div>
+              <div><b>گزارش‌دهنده:</b> ${esc(r.reporter)} (${esc(r.reporterId)})</div>
+              <div><b>هدف:</b> ${esc(r.target || 'نامشخص')}</div>
+              <div><b>دلیل:</b> ${esc(r.reason)}</div>
+              <div><b>لابی:</b> ${esc(r.room || '---')}</div>
+            </div>
+          `).join('')}
+          <button class="ghost" style="margin-top:8px;width:100%;font-size:.8rem" onclick="clearAdminReports()">🗑️ پاک کردن گزارش‌ها</button>
+        </div>
+        
+        <div class="admin-card">
+          <h3>🔑 بازیابی دسترسی</h3>
+          <input type="text" id="recoveryInput" placeholder="کد بازیابی" style="width:100%;margin-bottom:8px">
+          <button class="ghost" style="width:100%" onclick="useRecoveryCode()">بازیابی</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeAdminPanel() {
+  adminMode = false;
+  showLobby();
+}
+
+function setInfiniteResources() {
+  cfg.coins = 999999999;
+  cfg.gems = 999999999;
+  cfg.tokens = 999999;
+  syncUser();
+  saveCfg();
+  showToast('⚡ منابع بی‌نهایت فعال شد');
+  showLobby();
+}
+
+function sendAdminGift() {
+  const targetId = $('giftId').value.trim().toUpperCase();
+  const coins = parseInt($('giftCoins').value) || 0;
+  const gems = parseInt($('giftGems').value) || 0;
+  if (!targetId) return showToast('ID را وارد کنید', 'error');
+  if (!USERS[targetId]) return showToast('کاربری با این ID یافت نشد', 'error');
+  
+  USERS[targetId].coins += coins;
+  USERS[targetId].gems += gems;
+  
+  // اگر کاربر هدف همان کاربر فعلی است
+  if (targetId === cfg.id) {
+    cfg.coins += coins;
+    cfg.gems += gems;
+    saveCfg();
+  }
+  
+  const gifts = JSON.parse(localStorage.getItem(GIFTS_KEY) || '[]');
+  gifts.push({ targetId, coins, gems, timestamp: new Date().toISOString() });
+  localStorage.setItem(GIFTS_KEY, JSON.stringify(gifts));
+  saveUsers();
+  
+  showToast(`🎁 گیفت به ${targetId} ارسال شد`);
+  openAdminPanel();
+}
+
+function banUser(ban) {
+  const id = $('banId').value.trim().toUpperCase();
+  if (!id) return showToast('ID را وارد کنید', 'error');
+  if (!USERS[id]) return showToast('کاربری با این ID یافت نشد', 'error');
+  
+  USERS[id].banned = ban;
+  saveUsers();
+  
+  showToast(ban ? `⛔ کاربر ${id} بن شد` : `✅ کاربر ${id} آنبن شد`);
+  openAdminPanel();
+}
+
+function clearAdminReports() {
+  if (!confirm('همه گزارش‌ها پاک شوند؟')) return;
+  localStorage.setItem(REPORTS_KEY, '[]');
+  showToast('گزارش‌ها پاک شد');
+  openAdminPanel();
+}
+
+function useRecoveryCode() {
+  const code = $('recoveryInput').value.trim();
+  const stored = localStorage.getItem(RECOVERY_KEY);
+  if (code && code === stored) {
+    showToast('✅ دسترسی بازیابی شد');
+    openAdminPanel();
+  } else {
+    showToast('کد بازیابی نامعتبر است', 'error');
+  }
+}
+
+/* ==================== PROFILE & FRAMES ==================== */
+function showProfile() {
+  const frame = FRAMES[cfg.frame]?.img || '';
+  if (avTab === null) avTab = Math.max(0, AVATAR_SETS.findIndex(t => cfg.char-1 >= t[3] && cfg.char-1 < t[3]+t[2]));
+  const tabsHTML = AVATAR_SETS.map((t,k) => `<button class="${k===avTab?'gb':'ghost'}" style="flex:1;padding:8px 4px;font-size:.85rem" onclick="avTab=${k};showProfile()">${t[0]} (${t[2]})</button>`).join('');
+  const [,, cnt, off] = AVATAR_SETS[avTab];
+  const avatarsHTML = AVATARS.slice(off, off+cnt).map((src, j) => { const i = off + j; return `
+    <div style="text-align:center;cursor:pointer;border:2px solid ${cfg.char===i+1?'var(--gold)':'transparent'};border-radius:12px;padding:4px" onclick="cfg.char=${i+1};saveCfg();showProfile()">
+      <img src="${src}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;background:#222" onerror="this.style.background='#333'">
+    </div>`; }).join('');
+
+  const framesHTML = FRAMES.map(f => {
+    const owned = cfg.unlockedFrames.includes(f.id);
+    return `
+      <div style="text-align:center;cursor:pointer;border:2px solid ${cfg.frame===f.id?'var(--gold)':'transparent'};border-radius:12px;padding:4px" onclick="selectFrame(${f.id})">
+        <div style="position:relative;width:60px;height:60px;margin:auto;">
+          <img src="${AVATARS[cfg.char-1] || AVATARS[0]}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">
+          ${f.img ? `<img src="${f.img}" onerror="this.remove()" style="position:absolute;inset:-5px;width:70px;height:70px;">` : ''}
+        </div>
+        <div style="font-size:0.7rem;margin-top:4px;color:${owned?'#fff':'var(--gold)'}">${owned ? f.name : `💎 ${f.price}`}</div>
+      </div>`;
+  }).join('');
+
+  render(`
+    <div class="home" style="overflow-y:auto;background:#0a0806">
+      <button class="ghost" style="align-self:flex-start" onclick="showLobby()">→ بازگشت</button>
+      <h2 class="gt" style="text-align:center;">پروفایل شما</h2>
+
+      <div style="text-align:center;margin:16px 0;">
+        <div style="position:relative;width:100px;height:100px;margin:auto;">
+          <img src="${AVATARS[cfg.char-1] || AVATARS[0]}" style="width:100%;height:100%;border-radius:50%;border:3px solid var(--gold);object-fit:cover;background:#222" onerror="this.style.background='#333'">
+          ${frame ? `<img src="${frame}" onerror="this.remove()" style="position:absolute;inset:-50px;width:200px;height:200px;pointer-events:none">` : ''}
+        </div>
+        <h3 style="color:var(--gold);margin:12px 0 4px;">${esc(cfg.name || 'Player')}</h3>
+        <p style="color:var(--gold);font-size:.9rem;font-weight:bold;margin:2px 0">ID: ${esc(cfg.id)}</p>
+        <p style="color:#aaa;font-size:.85rem;margin:2px 0">🪙 ${cfg.coins} | 💎 ${cfg.gems} | 🎟️ ${cfg.tokens} &nbsp;•&nbsp; 🏆 ${cfg.wins}/${cfg.games}</p>
+        ${cfg.referredBy ? `<p style="color:var(--green);font-size:.8rem">دعوت شده توسط: ${esc(cfg.referredBy)}</p>` : ''}
+      </div>
+
+      <h3 style="color:var(--gold);font-size:1rem;">🖼️ انتخاب آواتار (رایگان)</h3>
+      <div style="display:flex;gap:6px;">${tabsHTML}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:10px;">${avatarsHTML}</div>
+
+      <h3 id="frames" style="color:var(--gold);font-size:1rem;margin-top:20px;">🖼️ قاب‌های پروفایل</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;padding-bottom:30px">${framesHTML}</div>
+    </div>
+  `);
+}
+
+function selectFrame(id) {
+  const f = FRAMES.find(x => x.id === id);
+  if (cfg.unlockedFrames.includes(id)) { cfg.frame = id; saveCfg(); showProfile(); return; }
+  if (cfg.gems >= f.price) {
+    cfg.gems -= f.price;
+    cfg.unlockedFrames.push(id);
+    cfg.frame = id;
+    syncUser(); saveCfg(); showProfile();
+    showToast(`✅ قاب «${f.name}» خریداری شد`);
+  } else showToast('جم کافی نیست!', 'error');
+}
+
+/* ==================== SETTINGS ==================== */
+function showSettings() {
+  render(`
+    <div class="home" style="justify-content:flex-start;overflow-y:auto">
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.9),rgba(5,3,2,.98));z-index:0"></div>
+      <div style="position:relative;z-index:1;width:100%;max-width:500px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-top:20px">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gold);padding-bottom:10px;margin-bottom:10px">
+          <button class="ghost" style="padding:6px 12px;border-radius:20px" onclick="showLobby()">→ بازگشت</button>
+          <h2 class="gt" style="margin:0;font-size:1.4rem;letter-spacing:2px">⚙️ تنظیمات سلطنتی</h2>
+          <div style="width:60px"></div>
+        </div>
+
+        <div class="settings-card">
+          <h3 class="settings-title">🔗 اتصال اکانت</h3>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="color:var(--gold);font-size:1.2rem">📧</span>
+              <input type="email" id="emailInput" placeholder="ایمیل خود را وارد کنید" value="${esc(cfg.email || '')}" style="flex:1;border-color:rgba(232,196,106,.2)">
+              <button class="gb" style="padding:8px 12px;font-size:.8rem" onclick="linkAccount('email')">اتصال</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="color:var(--gold);font-size:1.2rem">📱</span>
+              <input type="tel" id="phoneInput" placeholder="شماره موبایل خود را وارد کنید" value="${esc(cfg.phone || '')}" style="flex:1;border-color:rgba(232,196,106,.2)" dir="ltr">
+              <button class="gb" style="padding:8px 12px;font-size:.8rem" onclick="linkAccount('phone')">اتصال</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3 class="settings-title">🎵 صدا و تنظیمات</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+            <div>
+              <div style="color:#fff">صدای بازی</div>
+              <div style="color:#888;font-size:.75rem">پخش موسیقی و افکت‌ها</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="soundToggle" ${cfg.soundEnabled ? 'checked' : ''} onchange="toggleSound(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-top:8px">
+            <div>
+              <div style="color:#fff">نام نمایشی</div>
+              <div style="color:#888;font-size:.75rem">نام شما در بازی</div>
+            </div>
+            <input type="text" value="${esc(cfg.name || 'Player')}" onchange="cfg.name=this.value.trim()||'Player';syncUser();saveCfg();showToast('نام تغییر کرد')" style="width:140px;text-align:center">
+          </div>
+          <p style="color:var(--mute);font-size:.75rem;margin:8px 0 0">ID شما: <b style="color:var(--gold)">${esc(cfg.id)}</b> (غیرقابل تغییر)</p>
+        </div>
+
+        <button class="ghost" style="padding:12px;border-color:var(--gold);color:var(--gold);margin-bottom:30px" onclick="showLobby()">ذخیره و بازگشت</button>
+      </div>
+    </div>
+  `);
+}
+
+function linkAccount(type) {
+  const input = type === 'email' ? $('emailInput') : $('phoneInput');
+  const value = input.value.trim();
+  if (!value) return showToast('لطفا مقدار را وارد کنید', 'error');
+  if (type === 'email' && !value.includes('@')) return showToast('ایمیل نامعتبر است', 'error');
+  if (type === 'phone' && value.length < 10) return showToast('شماره موبایل نامعتبر است', 'error');
+  cfg[type] = value;
+  saveCfg();
+  showToast(`✅ ${type === 'email' ? 'ایمیل' : 'شماره'} با موفقیت متصل شد`);
+}
+
+function toggleSound(isOn) {
+  cfg.soundEnabled = isOn;
+  saveCfg();
+  if (isOn) playSfx('click');
+  showToast(isOn ? '🔊 صدا روشن شد' : '🔇 صدا خاموش شد');
+  const b = $('sndBtn'); if (b) b.textContent = isOn ? '🔊' : '🔇';
+}
+
+/* ==================== RULES PAGE ==================== */
+function showRules() {
+  const rulesHTML = RULES_DB.map(r => `<details><summary>${r.title}</summary><div class="rule-content">${r.content}</div></details>`).join('');
+  render(`
+    <div class="home" style="overflow-y:auto;padding:16px">
+      <div style="max-width:600px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gold);padding-bottom:10px;margin-bottom:14px">
+          <button class="ghost" style="padding:6px 10px;border-radius:20px" onclick="showLobby()">→ بازگشت</button>
+          <h2 class="gt" style="margin:0;font-size:1.3rem">📜 قوانین</h2>
+          <div style="width:60px"></div>
+        </div>
+        <div class="rules-container">${rulesHTML}</div>
+      </div>
+    </div>
+  `);
+}
+
+/* ==================== ROOM CREATE / JOIN ==================== */
+function showCreateRoom() {
+  const code = Math.floor(1000 + Math.random() * 9000);
+  render(`
+    <div class="home" style="justify-content:center;align-items:center">
+      <div class="settings-card" style="max-width:380px;text-align:center">
+        <h2 class="gt">ساخت لابی</h2>
+        <p style="color:var(--mute);margin:6px 0">کد اتاق شما:</p>
+        <p style="color:var(--gold);font-size:2.4rem;font-weight:900;letter-spacing:6px;margin:6px 0">${code}</p>
+        <input type="text" id="roomPass" placeholder="رمز (اختیاری)" style="width:100%;margin:8px 0">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="gb" style="flex:1" onclick="startGame('normal', ${code}, $('roomPass').value, true)">عادی<br><small>(۱ توکن)</small></button>
+          <button class="gb" style="flex:1;background:linear-gradient(180deg,#e8c46a,#8b1e1e);color:#fff" onclick="startGame('vip', ${code}, $('roomPass').value, true)">VIP<br><small>(۳ توکن)</small></button>
+        </div>
+        <button class="ghost" style="width:100%" onclick="showLobby()">بازگشت</button>
+      </div>
+    </div>
+  `);
+}
+
+function showJoinRoom() {
+  render(`
+    <div class="home" style="justify-content:center;align-items:center">
+      <div class="settings-card" style="max-width:380px;text-align:center">
+        <h2 class="gt">ورود به لابی</h2>
+        <input type="text" id="joinCode" placeholder="کد ۴ رقمی" maxlength="4" style="width:100%;margin:8px 0;text-align:center;font-size:1.4rem;letter-spacing:6px">
+        <input type="text" id="joinPass" placeholder="رمز (در صورت وجود)" style="width:100%;margin:8px 0">
+        <button class="gb" style="width:100%" onclick="joinGame()">ورود</button>
+        <button class="ghost" style="width:100%;margin-top:8px" onclick="showLobby()">بازگشت</button>
+      </div>
+    </div>
+  `);
+}
+
+function joinGame() {
+  const code = $('joinCode').value.trim();
+  if (code.length !== 4) return showToast('کد باید ۴ رقم باشد', 'error');
+  showToast('در حال اتصال...');
+  setTimeout(() => startGame('normal', parseInt(code), $('joinPass').value, false), 800);
+}
+
+/* ==================== GAME HELPERS (استفاده‌شده توسط mafia-pro.js) ==================== */
+const SEATS = [[50.2,26],[60.5,30.3],[67.7,42],[69.7,55.7],[63.2,69.3],[50,75.2],[36.8,68.9],[30.6,56.2],[32.2,42],[39.4,30.8]];
+const seatPos = i => SEATS[(i+5)%10];
+
+/* جای بازیکن‌ها روی صندلی‌های عکس تالار (مختصات روی عکس ۱۰۲۴×۱۰۲۴؛ عکس وسط صحنه قرار می‌گیرد) */
+const _L=[[357,382],[342,444],[317,504],[302,567],[284,629],[267,692],[250,786]];
+const _R=[[678,372],[690,432],[712,490],[735,550],[757,612],[782,675],[800,770]];
+const _T=[[450,172],[580,172]];
+const SEAT_ORDER={
+  16:[_L[6],_L[5],_L[4],_L[3],_L[2],_L[1],_L[0],_T[0],_T[1],_R[0],_R[1],_R[2],_R[3],_R[4],_R[5],_R[6]],
+  10:[_L[6],_L[4],_L[2],_L[0],_T[0],_T[1],_R[0],_R[2],_R[4],_R[6]]
+};
+function seatXY(n,i){const [ix,iy]=SEAT_ORDER[n][i];return [16.667+ix/1024*66.667, iy/1024*100+(n===10?1.3:.4)];}
+const PHASES = [['night','🌙','شب'],['day','☀️','روز'],['voting','🗳️','رأی'],['result','✅','نتیجه']];
+
+const addChat = (sender, text, sys, mafia) => G.chat.push({ sender, text, sys:!!sys, mafia:!!mafia });
+function later(fn, ms) { const id = G.gid; setTimeout(() => { if (G && G.gid === id) fn(); }, ms); }
+function setPhase(p) { G.phase = p; G.players.forEach(x => x.talking = false); }
+
+function kickPlayer(id) {
+  if (!G || !G.canKick || id === 0) return; // فقط سازنده‌ی لابی
+  if (G.phase !== 'day') return showToast('فقط در روز', 'error');
+  const p = G.players[id];
+  if (!p || !p.alive) return;
+  p.alive = false; p.talking = false;
+  G.queue = (G.queue || []).filter(x => x !== id);
+  G.guns = (G.guns || []).filter(x => x !== id);
+  G.link = (G.link || []).filter(x => x !== id);
+  addChat('System', `${p.name} توسط هاست اخراج شد.`, true);
+  G.rev++;
+  if (checkWin()) return;
+  if (G.cur === id) skipTurn(); else updateRoom();
+}
+
+/* ==================== VOICE (میکروفون + نشانگر صحبت) ==================== */
+const mic = { an:null, buf:null, ac:null };
+function stopMic() {
+  if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+  if (voicePeer) { try { voicePeer.destroy(); } catch(e) {} voicePeer = null; }
+  if (mic.ac) { try { mic.ac.close(); } catch(e) {} }
+  mic.an = mic.buf = mic.ac = null;
+}
+async function toggleMic() {
+  if (!G || !G.players[0].alive) return showToast('مردگان نمی‌توانند میکروفون باز کنند', 'error');
+  const btn = $('micBtn');
+  if (voiceStream) {
+    stopMic();
+    btn.textContent = '🔇'; btn.style.background = '';
+    return showToast('میکروفون خاموش شد');
+  }
+  try {
+    voiceStream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    btn.textContent = '🎤'; btn.style.background = 'var(--green)';
+    showToast('میکروفون روشن شد');
+    try {
+      mic.ac = new (window.AudioContext || window.webkitAudioContext)();
+      mic.an = mic.ac.createAnalyser(); mic.an.fftSize = 256;
+      mic.ac.createMediaStreamSource(voiceStream).connect(mic.an);
+      mic.buf = new Uint8Array(mic.an.frequencyBinCount);
+    } catch(e) {}
+    if (typeof Peer !== 'undefined') {
+      try {
+        voicePeer = new Peer(`mf-${G.roomCode}-${Date.now().toString(36)}`);
+        voicePeer.on('call', call => {
+          call.answer(voiceStream);
+          call.on('stream', remote => { const a = new Audio(); a.srcObject = remote; a.play().catch(() => {}); });
+        });
+      } catch(e) { console.warn('Peer init failed', e); }
+    }
+  } catch(e) { showToast('دسترسی به میکروفون ممکن نشد', 'error'); }
+}
+// میکروفون فقط در نوبت خودت باز است + درخشش آواتار هنگام صحبت
+setInterval(() => {
+  if (!G || !voiceStream) return;
+  const myTurn = ['day','sword'].includes(G.phase) && G.cur === 0 && G.players[0].alive;
+  voiceStream.getAudioTracks().forEach(t => t.enabled = myTurn);
+  let v = 0;
+  if (mic.an) { mic.an.getByteFrequencyData(mic.buf); v = mic.buf.reduce((a,b) => a+b, 0) / mic.buf.length; }
+  document.querySelector('.seat[data-id="0"] .avatar-wrap')?.classList.toggle('voice', myTurn && v > 20);
+}, 150);
+
+/* ==================== REPORT ==================== */
+function showReportModal() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'reportModal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>🚨 گزارش بازیکن / لابی</h3>
+      <input type="text" id="reportTarget" placeholder="نام بازیکن (اختیاری)" style="width:100%;margin-bottom:8px">
+      <textarea id="reportReason" placeholder="دلیل گزارش..."></textarea>
+      <button class="gb" style="width:100%" onclick="submitReport()">ارسال به مدیر</button>
+      <button class="ghost" style="width:100%;margin-top:6px" onclick="document.getElementById('reportModal').remove()">انصراف</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function submitReport() {
+  const target = $('reportTarget').value.trim();
+  const reason = $('reportReason').value.trim();
+  if (!reason) return showToast('دلیل را وارد کنید', 'error');
+  const reports = JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]');
+  reports.push({
+    timestamp: new Date().toISOString(),
+    reporter: cfg.name || 'Player',
+    reporterId: cfg.id,
+    target: target || 'نامشخص',
+    reason: reason,
+    room: G?.roomCode || '---'
+  });
+  localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
+  $('reportModal').remove();
+  showToast('✅ گزارش برای مدیر ارسال شد');
+}
+
+/* ==================== EXIT ==================== */
+function exitGame() {
+  if (G) clearInterval(G.iv);
+  stopMic();
+  G = null;
+  showLobby();
+}
+
+window.onerror = (msg) => console.error('[MAFIA]', msg);
+
+</script>
+<!-- لایه‌ی پرو (باید بعد از اسکریپت اصلی لود شود) -->
+<script src="mafia-pro.js"></script>
+</body>
+</html>
