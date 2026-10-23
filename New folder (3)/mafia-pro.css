@@ -1,0 +1,99 @@
+/* MAFIA ARENA — Pro layer CSS (load after the main <style>) */
+.lobolo{width:92px;height:92px;border-radius:50%;border:2px solid var(--gold);box-shadow:var(--gold-glow);margin:0 auto 6px;display:block;object-fit:cover}
+.refdone{text-align:center;font-size:.8rem;color:var(--green);margin-bottom:12px}
+.szrow{display:flex;gap:8px;margin:8px 0}.szrow button{flex:1}
+
+/* dead = blood ring over the profile */
+.avatar-wrap.dead{filter:none;opacity:1}
+.avatar-wrap.dead::after,.pl.dead .av::after{content:'';position:absolute;inset:-26%;background:url(blood.png) center/contain no-repeat;pointer-events:none}
+.pl .av{position:relative;display:inline-block;flex:none;line-height:0}
+.pl.dead{opacity:1}.pl.dead>span:nth-child(2){opacity:.45;text-decoration:line-through}
+.avatar-wrap.fresh::after{animation:bpop .9s cubic-bezier(.2,1.5,.4,1)}
+@keyframes bpop{0%{transform:scale(.2) rotate(-25deg);opacity:0}60%{opacity:1}100%{transform:scale(1) rotate(0)}}
+
+/* spectator */
+.spec{display:none;position:absolute;left:50%;top:2.9%;transform:translateX(-50%);z-index:5;padding:.4em 1.4em;border-radius:99px;background:rgba(10,8,7,.88);border:1px solid var(--gold);color:var(--gold);font-weight:700;animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 18px rgba(232,196,106,.7)}}
+.spectator .interaction-bar{display:none!important}
+.spectator .chat input,.spectator .sticker-bar{opacity:.4}
+
+/* my card tile */
+.mytile{display:flex;align-items:center;gap:calc(var(--u)*1);height:100%;padding:0 calc(var(--u)*1);cursor:pointer;background:#0d0a09;border:1px solid var(--gold);border-radius:calc(var(--u)*.8);box-shadow:var(--gold-glow)}
+.mytile img{height:88%;border-radius:calc(var(--u)*.4)}
+.mytile div{display:flex;flex-direction:column;font-size:calc(var(--u)*1.05)}.mytile small{color:var(--mute)}
+.roles{display:block}
+
+/* role card reveal (3D flip) */
+.cardov{position:absolute;inset:0;z-index:60;background:radial-gradient(circle,rgba(40,10,10,.85),rgba(0,0,0,.95));display:grid;place-items:center;text-align:center;animation:fadein .5s}
+@keyframes fadein{from{opacity:0}}
+.cscene{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.7);max-width:calc(var(--u)*40)}
+.card3d{width:calc(var(--u)*17);height:calc(var(--u)*25);position:relative;transform-style:preserve-3d;transition:transform 1.3s cubic-bezier(.3,1.3,.5,1);perspective:1000px}
+.flip .card3d{transform:rotateY(180deg)}
+.cf{position:absolute;inset:0;backface-visibility:hidden;border-radius:calc(var(--u)*1);overflow:hidden;box-shadow:0 0 40px rgba(232,196,106,.45)}
+.cback{display:grid;place-items:center;font-size:calc(var(--u)*7);background:repeating-linear-gradient(45deg,#3a0d0d,#3a0d0d 10px,#2a0808 10px,#2a0808 20px);border:3px solid var(--gold)}
+.cfront{transform:rotateY(180deg);background:#140c0c;border:3px solid var(--gold)}
+.cfront img{width:100%;height:100%;object-fit:cover}.ce{display:grid;place-items:center;height:100%;font-size:calc(var(--u)*8)}
+.cscene h2{margin:0;font-size:calc(var(--u)*3);opacity:0;transform:translateY(20px);transition:all .8s 1.2s}
+.cscene p,.cscene button{opacity:0;transition:opacity .8s 1.6s;margin:0}
+.flip .cscene h2{opacity:1;transform:none}.flip .cscene p,.flip .cscene button{opacity:1}
+.ct{font-weight:700}.ct.mafia{color:#ff6b6b}.ct.town{color:#6bd68a}.ct.solo{color:#b98cff}
+.cd{color:#ddd;font-size:calc(var(--u)*1.2);line-height:1.8}
+
+/* day / night banner */
+.ban{position:absolute;inset:0;z-index:55;display:grid;place-items:center;pointer-events:none;animation:banio 2.2s forwards}
+.ban>div{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.5);text-shadow:0 0 30px #000}
+.ban span{font-size:calc(var(--u)*9);animation:spinin 1.6s ease-out}.ban b{font-size:calc(var(--u)*4)}
+.ban.nb{background:radial-gradient(circle,rgba(5,5,40,.85),rgba(0,0,15,.6))}.ban.db{background:radial-gradient(circle,rgba(120,70,10,.55),rgba(0,0,0,.35))}
+@keyframes banio{0%{opacity:0}20%,75%{opacity:1}100%{opacity:0}}
+@keyframes spinin{from{transform:scale(.2) rotate(-120deg);opacity:0}to{transform:none;opacity:1}}
+
+/* gun shot */
+.gunfx{position:absolute;width:calc(var(--u)*9);transform:translate(-50%,-50%) rotate(var(--r));animation:gunin 1.4s forwards;z-index:35}
+.gunfx img{width:100%;display:block;filter:drop-shadow(0 6px 10px #000)}
+.gunfx i{position:absolute;right:-6%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;background:radial-gradient(#fff,#ffb347 40%,transparent 70%);opacity:0;animation:muzzle .5s .7s forwards}
+@keyframes gunin{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--r)) scale(.3)}25%{opacity:1;transform:translate(-50%,-50%) rotate(var(--r)) scale(1)}50%{transform:translate(-50%,-50%) rotate(var(--r)) scale(1.05)}58%{transform:translate(-62%,-50%) rotate(calc(var(--r) - 8deg)) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--r)) scale(1)}}
+@keyframes muzzle{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(2.2)}}
+.hitfx{position:absolute;width:calc(var(--u)*7);aspect-ratio:1;transform:translate(-50%,-50%);background:url(blood.png) center/contain no-repeat,radial-gradient(rgba(190,0,0,.8),transparent 65%);animation:hit .8s forwards}
+@keyframes hit{0%{transform:translate(-50%,-50%) scale(.2);opacity:1}100%{transform:translate(-50%,-50%) scale(1.4);opacity:0}}
+.stage.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translate(-8px,4px)}40%{transform:translate(7px,-5px)}60%{transform:translate(-5px,3px)}80%{transform:translate(4px,-2px)}}
+
+/* 16-player room */
+.n16 .avatar-wrap{width:calc(var(--u)*3.8);height:calc(var(--u)*3.8)}
+.n16 .seat{width:calc(var(--u)*7)}.n16 .seat-name{font-size:calc(var(--u)*.8)}
+.n16 .pl{font-size:.82em;padding:0 calc(var(--u)*.5)}.n16 .pl img{width:calc(var(--u)*1.7);height:calc(var(--u)*1.7)}
+
+/* ====== افزوده‌ها: بنر شب/روز با آرم + اتاق ۱۶ نفره روی صندلی‌ها ====== */
+.ban .dn{position:relative;display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*.8)}
+.ban.dnb.nb{background:radial-gradient(circle at 50% 45%,rgba(6,10,30,.97),rgba(0,0,0,.97))}
+.ban.dnb.db{background:radial-gradient(circle at 50% 45%,rgba(30,18,4,.97),rgba(0,0,0,.97))}
+.ban .dnw{position:relative;width:calc(var(--u)*60);max-width:92%;-webkit-mask-image:radial-gradient(ellipse 52% 62% at 50% 50%,#000 80%,transparent 100%);mask-image:radial-gradient(ellipse 52% 62% at 50% 50%,#000 80%,transparent 100%)}
+.ban .dnw img{display:block;width:100%;animation:dnin 1.4s cubic-bezier(.2,.9,.3,1.1)}
+.ban .dnw i{position:absolute;inset:0;background:url('daynight.jpg') center/100% 100% no-repeat;filter:brightness(.22);opacity:0;animation:dnim .9s .7s forwards}
+.ban .dn.n .dnw i{clip-path:inset(0 0 0 50%)}.ban .dn.d .dnw i{clip-path:inset(0 50% 0 0)}
+.ban .dn.n img{filter:drop-shadow(0 0 28px rgba(80,110,255,.55))}
+.ban .dn.d img{filter:drop-shadow(0 0 28px rgba(255,170,60,.6))}
+@keyframes dnin{from{transform:scale(.55) rotate(-6deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes dnim{to{opacity:1}}
+.n16 .avatar-wrap{width:calc(var(--u)*3.4);height:calc(var(--u)*3.4)}
+.n16 .seat-name{margin-top:calc(var(--u)*-.7);position:relative;z-index:1;font-size:calc(var(--u)*.75)}
+
+/* ====== حلقه‌ی خونی بازیکن کشته‌شده + تفنگ جدید ====== */
+.avatar-wrap.dead::after,.pl.dead .av::after{inset:auto;left:-25.6%;top:-33.4%;width:156.9%;height:188.7%;background:url(blood.png) center/100% 100% no-repeat;z-index:1}
+.seat-name{position:relative;z-index:2}
+.hitfx{background:radial-gradient(rgba(190,0,0,.9),rgba(120,0,0,.45) 45%,transparent 68%)}
+.gunfx{width:calc(var(--u)*8)}
+.gunfx i{right:-13%;top:-11%}
+
+/* ====== نمایش کارت نقش (عکس خود کارت) ====== */
+.cfront{border:0;background:transparent;box-shadow:none;overflow:visible}
+.cfront img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 22px rgba(232,196,106,.6))}
+.cardmiss{display:grid;place-items:center;align-content:center;gap:6px;width:100%;height:100%;background:#140c0c;border:2px dashed var(--gold);border-radius:inherit;color:var(--mute);font-size:.7rem}
+.cardmiss .ce{font-size:3rem;height:auto}
+.cfront .cardmiss .ce{font-size:calc(var(--u)*8)}
+.mytile .cardmiss{display:none}
+.rcard .rimg .cardmiss{border-radius:6px}
+
+/* ====== شماره‌ی بازیکن کنار اسم ====== */
+.snum{display:inline-grid;place-items:center;min-width:1.55em;height:1.55em;margin-inline-end:.4em;padding:0 .2em;border-radius:99px;background:var(--gold);color:#000;font-size:.78em;font-weight:900;line-height:1;vertical-align:middle}
+.n16 .snum{min-width:1.45em;height:1.45em}
